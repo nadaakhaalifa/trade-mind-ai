@@ -1,0 +1,22 @@
+services:
+  api:
+    build: .
+    container_name: trade_mind_api
+    ports:
+      - "8000:8000"
+
+  db:
+    image: postgres:16
+    container_name: trade_mind_db
+    environment:
+      POSTGRES_DB: trade_mind
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7
+    container_name: trade_mind_redis
+    ports:
+      - "6379:6379"
