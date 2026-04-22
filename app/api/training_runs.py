@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from app.db.session import SessionLocal
 from app.models.training_run import TrainingRun
 from app.models.experiment import Experiment
@@ -38,16 +38,20 @@ def create_training_run(training_run: TrainingRunCreate):
     return new_training_run
 
 
-# Get all training runs
+# Get all training runs, optionally filtered by status
 @router.get("/", response_model=list[TrainingRunResponse])
-def get_training_runs():
+def get_training_runs(status: str | None = Query(default=None)):
     db = SessionLocal()
 
-    training_runs = db.query(TrainingRun).all()
+    query = db.query(TrainingRun)
+
+    if status:
+        query = query.filter(TrainingRun.status == status)
+
+    training_runs = query.all()
 
     db.close()
     return training_runs
-
 
 # Get one training run by id
 @router.get("/{training_run_id}", response_model=TrainingRunResponse)
