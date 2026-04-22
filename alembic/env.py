@@ -7,6 +7,7 @@ from alembic import context
 from app.models.base import Base
 from app.models.user import User
 from app.models.agent import Agent
+from app.models.environment import Environment
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
