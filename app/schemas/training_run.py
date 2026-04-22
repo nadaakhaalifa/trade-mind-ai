@@ -17,6 +17,7 @@ class TrainingRunResponse(BaseModel):
     algorithm: str
     episodes: int
     status: str
+    progress: int
     started_at: Optional[datetime] = None
     finished_at: Optional[datetime] = None
     created_at: datetime
