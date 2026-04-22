@@ -3,6 +3,7 @@ from app.db.session import SessionLocal
 from app.models.training_run import TrainingRun
 from app.models.experiment import Experiment
 from app.schemas.training_run import TrainingRunCreate, TrainingRunResponse
+from app.tasks.training_tasks import run_training_task
 
 
 router = APIRouter(prefix="/training-runs", tags=["Training Runs"])
@@ -29,8 +30,11 @@ def create_training_run(training_run: TrainingRunCreate):
     db.add(new_training_run)
     db.commit()
     db.refresh(new_training_run)
-    db.close()
 
+    # Send the training job to Celery worker in the background
+    run_training_task.delay(new_training_run.id)
+
+    db.close()
     return new_training_run
 
 
