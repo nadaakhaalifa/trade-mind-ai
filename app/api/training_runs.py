@@ -1,0 +1,45 @@
+from fastapi import APIRouter, HTTPException
+from app.db.session import SessionLocal
+from app.models.training_run import TrainingRun
+from app.models.experiment import Experiment
+from app.schemas.training_run import TrainingRunCreate, TrainingRunResponse
+
+
+router = APIRouter(prefix="/training-runs", tags=["Training Runs"])
+
+
+# Create a new training run
+@router.post("/", response_model=TrainingRunResponse)
+def create_training_run(training_run: TrainingRunCreate):
+    db = SessionLocal()
+
+    # Make sure the experiment exists first
+    experiment = db.query(Experiment).filter(Experiment.id == training_run.experiment_id).first()
+
+    if not experiment:
+        db.close()
+        raise HTTPException(status_code=404, detail="Experiment not found")
+
+    new_training_run = TrainingRun(
+        experiment_id=training_run.experiment_id,
+        algorithm=training_run.algorithm,
+        episodes=training_run.episodes,
+    )
+
+    db.add(new_training_run)
+    db.commit()
+    db.refresh(new_training_run)
+    db.close()
+
+    return new_training_run
+
+
+# Get all training runs
+@router.get("/", response_model=list[TrainingRunResponse])
+def get_training_runs():
+    db = SessionLocal()
+
+    training_runs = db.query(TrainingRun).all()
+
+    db.close()
+    return training_runs

@@ -1,13 +1,16 @@
 from fastapi import FastAPI
-from app.db.session import engine
 from sqlalchemy import text
-from app.api import agents
-from app.api import experiments
-# 
+
+from app.db.session import engine
+from app.api import agents, experiments, training_runs
+
+
 app = FastAPI()
 
 app.include_router(agents.router)
 app.include_router(experiments.router)
+app.include_router(training_runs.router)
+
 
 @app.get("/")
 def root():
