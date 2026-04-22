@@ -32,3 +32,13 @@ def create_agent(payload: AgentCreate):
         return agent
     finally:
         db.close()
+        
+
+@router.get("/agents", response_model=list[AgentResponse])
+def list_agents():
+    db: Session = SessionLocal()
+    try:
+        agents = db.query(Agent).all()
+        return agents
+    finally:
+        db.close()

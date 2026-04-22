@@ -9,7 +9,7 @@ app.include_router(agents.router)
 
 @app.get("/")
 def root():
-    return {"message": "TradeMind AI backend is running"}
+    return {"message": "TradeMind AI backend is running v2"}
 
 
 @app.get("/test-db")
