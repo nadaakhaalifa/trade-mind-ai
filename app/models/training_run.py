@@ -22,6 +22,9 @@ class TrainingRun(Base):
     # Example: pending, running, completed, failed
     status = Column(String, nullable=False, default="pending")
 
+    # Training progress percentage (0 → 100)
+    progress = Column(Integer, nullable=False, default=0)
+
     # Time when training started
     started_at = Column(DateTime(timezone=True), nullable=True)
 
