@@ -47,3 +47,18 @@ def get_training_runs():
 
     db.close()
     return training_runs
+
+
+# Get one training run by id
+@router.get("/{training_run_id}", response_model=TrainingRunResponse)
+def get_training_run(training_run_id: int):
+    db = SessionLocal()
+
+    training_run = db.query(TrainingRun).filter(TrainingRun.id == training_run_id).first()
+
+    if not training_run:
+        db.close()
+        raise HTTPException(status_code=404, detail="Training run not found")
+
+    db.close()
+    return training_run
