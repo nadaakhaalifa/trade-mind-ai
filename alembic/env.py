@@ -9,6 +9,7 @@ from app.models.user import User
 from app.models.agent import Agent
 from app.models.environment import Environment
 from app.models.experiment import Experiment
+from app.models.training_run import TrainingRun
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
