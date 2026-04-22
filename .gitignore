@@ -1,0 +1,24 @@
+# Virtual environments
+venv/
+env/
+Trade-ai-venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Env files
+.env
+
+# MacOS
+.DS_Store
+
+# VS Code / IDE
+.vscode/
+.idea/
+
+# Pytest
+.pytest_cache/
+
+# Alembic cache
+alembic/versions/__pycache__/
