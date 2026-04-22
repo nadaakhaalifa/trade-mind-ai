@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter , HTTPException, Query
 from app.db.session import SessionLocal
 from app.models.experiment import Experiment
 from app.schemas.experiment import ExperimentCreate, ExperimentResponse
@@ -37,3 +37,17 @@ def get_experiments():
 
     db.close()
     return experiments
+
+# Get one experiment by id
+@router.get("/{experiment_id}", response_model=ExperimentResponse)
+def get_experiment(experiment_id: int):
+    db = SessionLocal()
+
+    experiment = db.query(Experiment).filter(Experiment.id == experiment_id).first()
+
+    if not experiment:
+        db.close()
+        raise HTTPException(status_code=404, detail="Experiment not found")
+
+    db.close()
+    return experiment
