@@ -7,6 +7,9 @@ from app.models.training_result import TrainingResult
 from app.models.training_run import TrainingRun
 from app.rl.trainer import DQNTrainer
 
+import os
+import torch
+
 
 @celery.task(name="app.tasks.training_tasks.run_training_task")
 def run_training_task(training_run_id: int):
@@ -94,6 +97,18 @@ def run_training_task(training_run_id: int):
 
         if not training_run:
             return {"error": "Training run not found before completion"}
+
+        # 🔥 Save trained model (NEW STEP)
+        os.makedirs("models", exist_ok=True)
+
+        model_path = f"models/model_{training_run_id}.pt"
+
+        torch.save(
+            trainer.agent.network.state_dict(),
+            model_path
+        )
+
+        training_run.model_path = model_path
 
         # Mark the training run as completed
         training_run.status = "completed"

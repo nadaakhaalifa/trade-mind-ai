@@ -25,6 +25,9 @@ class TrainingRun(Base):
     # Training progress percentage (0 → 100)
     progress = Column(Integer, nullable=False, default=0)
 
+    # Path where trained model is saved (NEW)
+    model_path = Column(String, nullable=True)
+
     # Time when training started
     started_at = Column(DateTime(timezone=True), nullable=True)
 
