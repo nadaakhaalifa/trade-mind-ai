@@ -2,19 +2,18 @@ from app.rl.agent import DQNAgent
 from app.rl.environment import TradingEnvironment
 from app.rl.replay_buffer import ReplayBuffer
 
-# episode 1 → agent practiced once
-# total_reward → total profit from that episode
-# final_balance → starting balance + profit
-# memory_size → saved experiences
+# State → Action → Reward → Learn → Improve DQN
 
 class DQNTrainer:
-    def __init__(self, prices, episodes=10):
+    def __init__(self, prices, episodes=10, batch_size=4):
         """
-        prices: list of market prices used for training
+        prices: market prices used for training
         episodes: how many times the agent practices
+        batch_size: how many memories the agent learns from each step
         """
         self.prices = prices
         self.episodes = episodes
+        self.batch_size = batch_size
 
         self.env = TradingEnvironment(prices=prices)
         self.agent = DQNAgent()
@@ -22,7 +21,7 @@ class DQNTrainer:
 
     def train(self):
         """
-        Run the training loop.
+        Run training episodes and let the agent learn from stored experiences.
         """
         results = []
 
@@ -43,14 +42,21 @@ class DQNTrainer:
                     done,
                 )
 
+                if len(self.replay_buffer) >= self.batch_size:
+                    batch = self.replay_buffer.sample(self.batch_size)
+                    self.agent.learn(batch)
+
                 state = next_state
                 total_reward += reward
+
+            self.agent.decay_epsilon()
 
             results.append({
                 "episode": episode + 1,
                 "total_reward": total_reward,
                 "final_balance": self.env.balance,
                 "memory_size": len(self.replay_buffer),
+                "epsilon": self.agent.epsilon,
             })
 
         return results
