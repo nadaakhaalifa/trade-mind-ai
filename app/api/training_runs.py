@@ -4,7 +4,7 @@ from app.models.training_run import TrainingRun
 from app.models.experiment import Experiment
 from app.schemas.training_run import TrainingRunCreate, TrainingRunResponse
 from app.tasks.training_tasks import run_training_task
-
+from app.models.training_result import TrainingResult
 
 router = APIRouter(prefix="/training-runs", tags=["Training Runs"])
 
@@ -66,3 +66,23 @@ def get_training_run(training_run_id: int):
 
     db.close()
     return training_run
+
+# Get episode results for one training run
+@router.get("/{training_run_id}/results")
+def get_training_run_results(training_run_id: int):
+    db = SessionLocal()
+
+    training_run = db.query(TrainingRun).filter(
+        TrainingRun.id == training_run_id
+    ).first()
+
+    if not training_run:
+        db.close()
+        raise HTTPException(status_code=404, detail="Training run not found")
+
+    results = db.query(TrainingResult).filter(
+        TrainingResult.training_run_id == training_run_id
+    ).order_by(TrainingResult.episode).all()
+
+    db.close()
+    return results
