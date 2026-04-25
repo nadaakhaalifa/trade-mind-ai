@@ -1,4 +1,6 @@
+import copy
 import random
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -15,10 +17,14 @@ class DQNAgent:
         self.state_size = state_size
         self.action_size = action_size
 
-        # neural network (brain)
+        # main network: learns every step
         self.network = DQNNetwork(state_size, action_size)
 
-        # optimizer (updates the network)
+        # target network: used to calculate stable future values
+        self.target_network = copy.deepcopy(self.network)
+        self.target_network.eval()
+
+        # optimizer (updates the main network)
         self.optimizer = optim.Adam(self.network.parameters(), lr=0.001)
 
         # loss function (how wrong the model is)
@@ -48,11 +54,9 @@ class DQNAgent:
         """
         Choose action using epsilon-greedy strategy.
         """
-        # exploration: choose random action
         if random.random() < self.epsilon:
             return random.randint(0, self.action_size - 1)
 
-        # exploitation: choose best action from network
         state_tensor = self.preprocess_state(state)
 
         with torch.no_grad():
@@ -74,7 +78,7 @@ class DQNAgent:
             q_values = self.network(state_tensor)
 
             with torch.no_grad():
-                next_q_values = self.network(next_state_tensor)
+                next_q_values = self.target_network(next_state_tensor)
                 max_next_q = torch.max(next_q_values)
 
             target = reward
@@ -92,7 +96,6 @@ class DQNAgent:
         targets = torch.cat(targets)
 
         predictions = self.network(states)
-
         loss = self.criterion(predictions, targets)
 
         self.optimizer.zero_grad()
@@ -108,3 +111,9 @@ class DQNAgent:
 
         if self.epsilon < self.epsilon_min:
             self.epsilon = self.epsilon_min
+
+    def update_target_network(self):
+        """
+        Copy the main network weights into the target network.
+        """
+        self.target_network.load_state_dict(self.network.state_dict())
