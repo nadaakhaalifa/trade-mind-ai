@@ -86,3 +86,32 @@ def get_training_run_results(training_run_id: int):
 
     db.close()
     return results
+
+
+# Get chart-ready metrics for one training run
+@router.get("/{training_run_id}/metrics")
+def get_training_run_metrics(training_run_id: int):
+    db = SessionLocal()
+
+    training_run = db.query(TrainingRun).filter(
+        TrainingRun.id == training_run_id
+    ).first()
+
+    if not training_run:
+        db.close()
+        raise HTTPException(status_code=404, detail="Training run not found")
+
+    results = db.query(TrainingResult).filter(
+        TrainingResult.training_run_id == training_run_id
+    ).order_by(TrainingResult.episode).all()
+
+    db.close()
+
+    return {
+        "training_run_id": training_run_id,
+        "episodes": [result.episode for result in results],
+        "rewards": [result.total_reward for result in results],
+        "balances": [result.final_balance for result in results],
+        "epsilons": [result.epsilon for result in results],
+        "memory_sizes": [result.memory_size for result in results],
+    }
