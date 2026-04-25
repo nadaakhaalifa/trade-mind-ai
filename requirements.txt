@@ -18,3 +18,5 @@ typing_extensions==4.15.0
 uvicorn==0.45.0
 celery
 redis
+torch==2.11.0+cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
