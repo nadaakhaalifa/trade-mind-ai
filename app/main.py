@@ -3,14 +3,14 @@ from sqlalchemy import text
 
 from app.db.session import engine
 from app.api import agents, experiments, training_runs
-
+from app.api import backtests
 
 app = FastAPI()
 
 app.include_router(agents.router)
 app.include_router(experiments.router)
 app.include_router(training_runs.router)
-
+app.include_router(backtests.router)
 
 @app.get("/")
 def root():
