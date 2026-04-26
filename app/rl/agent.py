@@ -36,7 +36,7 @@ class DQNAgent:
         # exploration rate
         self.epsilon = 1.0
         self.epsilon_min = 0.05
-        self.epsilon_decay = 0.995
+        self.epsilon_decay = 0.95
 
     def preprocess_state(self, state):
         """
