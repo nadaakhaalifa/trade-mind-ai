@@ -65,10 +65,12 @@ class TradingEnvironment:
         ]
 
         price_change = window[-1] - window[-2]
+        moving_avg = sum(window) / len(window)
 
         return {
             "prices": window,
             "price_change": price_change,
+            "moving_avg": moving_avg,
             "balance": self.balance,
             "position": self.position,
         }

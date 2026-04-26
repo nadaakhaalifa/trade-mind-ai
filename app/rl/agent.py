@@ -9,10 +9,10 @@ from app.rl.network import DQNNetwork
 
 
 class DQNAgent:
-    def __init__(self, state_size=8, action_size=3):
+    def __init__(self, state_size=9, action_size=3):
         """
         state_size:
-        5 prices + price_change + normalized_balance + position = 8
+        5 prices + price_change + moving_average + normalized_balance + position = 9
 
         action_size:
         0 = hold
@@ -44,7 +44,8 @@ class DQNAgent:
         Final input:
         [
             normalized prices...,
-            price_change,
+            normalized price_change,
+            normalized moving_avg,
             normalized balance,
             position
         ]
@@ -54,22 +55,24 @@ class DQNAgent:
         balance = state["balance"]
         position = state["position"]
 
-        # Normalize prices so the model learns patterns, not large numbers.
         first_price = prices[0]
+
         normalized_prices = [
             (price - first_price) / first_price
             for price in prices
         ]
 
-        # Price direction signal
         price_change = state.get("price_change", prices[-1] - prices[-2])
         normalized_price_change = price_change / first_price
 
-        # Keep balance small for neural network stability
+        moving_avg = state.get("moving_avg", sum(prices) / len(prices))
+        normalized_moving_avg = moving_avg / first_price
+
         normalized_balance = balance / 10000
 
         state_list = normalized_prices + [
             normalized_price_change,
+            normalized_moving_avg,
             normalized_balance,
             position,
         ]
