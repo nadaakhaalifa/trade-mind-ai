@@ -9,44 +9,70 @@ from app.rl.network import DQNNetwork
 
 
 class DQNAgent:
-    def __init__(self, state_size=7, action_size=3):
+    def __init__(self, state_size=8, action_size=3):
         """
-        state_size: number of inputs (prices + balance + position)
-        action_size: number of actions (hold, buy, sell)
+        state_size:
+        5 prices + price_change + normalized_balance + position = 8
+
+        action_size:
+        0 = hold
+        1 = buy
+        2 = sell
         """
+
         self.state_size = state_size
         self.action_size = action_size
 
-        # main network: learns every step
         self.network = DQNNetwork(state_size, action_size)
 
-        # target network: used to calculate stable future values
         self.target_network = copy.deepcopy(self.network)
         self.target_network.eval()
 
-        # optimizer (updates the main network)
         self.optimizer = optim.Adam(self.network.parameters(), lr=0.001)
-
-        # loss function (how wrong the model is)
         self.criterion = nn.MSELoss()
 
-        # discount factor (importance of future rewards)
         self.gamma = 0.99
 
-        # exploration rate
         self.epsilon = 1.0
         self.epsilon_min = 0.05
         self.epsilon_decay = 0.95
 
     def preprocess_state(self, state):
         """
-        Convert state dict → flat tensor.
+        Convert environment state into a flat numeric tensor.
+
+        Final input:
+        [
+            normalized prices...,
+            price_change,
+            normalized balance,
+            position
+        ]
         """
+
         prices = state["prices"]
         balance = state["balance"]
         position = state["position"]
 
-        state_list = prices + [balance, position]
+        # Normalize prices so the model learns patterns, not large numbers.
+        first_price = prices[0]
+        normalized_prices = [
+            (price - first_price) / first_price
+            for price in prices
+        ]
+
+        # Price direction signal
+        price_change = state.get("price_change", prices[-1] - prices[-2])
+        normalized_price_change = price_change / first_price
+
+        # Keep balance small for neural network stability
+        normalized_balance = balance / 10000
+
+        state_list = normalized_prices + [
+            normalized_price_change,
+            normalized_balance,
+            position,
+        ]
 
         return torch.tensor([state_list], dtype=torch.float32)
 
@@ -54,6 +80,7 @@ class DQNAgent:
         """
         Choose action using epsilon-greedy strategy.
         """
+
         if random.random() < self.epsilon:
             return random.randint(0, self.action_size - 1)
 
@@ -68,6 +95,7 @@ class DQNAgent:
         """
         Learn from a batch of experiences.
         """
+
         states = []
         targets = []
 
@@ -86,7 +114,7 @@ class DQNAgent:
             if not done:
                 target += self.gamma * max_next_q.item()
 
-            target_q_values = q_values.clone()
+            target_q_values = q_values.clone().detach()
             target_q_values[0][action] = target
 
             states.append(state_tensor)
@@ -104,8 +132,9 @@ class DQNAgent:
 
     def decay_epsilon(self):
         """
-        Reduce randomness slowly after each episode.
+        Reduce randomness after each episode.
         """
+
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
@@ -114,6 +143,7 @@ class DQNAgent:
 
     def update_target_network(self):
         """
-        Copy the main network weights into the target network.
+        Copy main network weights into target network.
         """
+
         self.target_network.load_state_dict(self.network.state_dict())
