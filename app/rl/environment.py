@@ -54,20 +54,33 @@ class TradingEnvironment:
         """
         current_price = self.prices[self.current_step]
         reward = 0
-
+        
+        # HOLD
+        if action == 0:
+            reward = 0
+            
         # BUY
-        if action == 1 and self.position == 0:
-            self.position = 1
-            self.entry_price = current_price
-
+        elif action == 1:
+            if self.position == 0:
+                self.position = 1
+                self.entry_price = current_price
+            else:
+                # Penalize repeated buy while already holding
+                reward = -1
+            
         # SELL
-        elif action == 2 and self.position == 1:
-            profit = current_price - self.entry_price
-            self.balance += profit
-            reward = profit
+        elif action == 2:
+            if self.position == 1:
+                profit = current_price - self.entry_price
+                self.balance += profit
+                reward = profit
 
-            self.position = 0
-            self.entry_price = 0
+                self.position = 0
+                self.entry_price = 0
+            else:
+                # Penalize selling without holding anything
+                reward = -1
+                
 
         # move forward in time
         self.current_step += 1
