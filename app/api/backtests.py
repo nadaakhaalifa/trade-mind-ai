@@ -65,6 +65,9 @@ def create_backtest(backtest: BacktestCreate):
     state = env.reset()
     done = False
     total_reward = 0
+    
+    trade_history = []
+    step = 0   
 
     # Count what the model actually decided during backtesting
     action_counts = {
@@ -76,15 +79,27 @@ def create_backtest(backtest: BacktestCreate):
     while not done:
         action = agent.choose_action(state)
 
+        price = state["prices"][-1]
+
         if action == 0:
-            action_counts["hold"] += 1
+           action_counts["hold"] += 1
+           action_name = "hold"
         elif action == 1:
-            action_counts["buy"] += 1
+           action_counts["buy"] += 1
+           action_name = "buy"
         elif action == 2:
-            action_counts["sell"] += 1
+           action_counts["sell"] += 1
+           action_name = "sell"
+
+        trade_history.append({
+            "step": step,
+            "action": action_name,
+            "price": price,
+        })
 
         state, reward, done = env.step(action)
         total_reward += reward
+        step += 1
 
     new_backtest = Backtest(
         training_run_id=backtest.training_run_id,
@@ -105,6 +120,7 @@ def create_backtest(backtest: BacktestCreate):
         "final_balance": new_backtest.final_balance,
         "created_at": new_backtest.created_at,
         "actions": action_counts,
+        "trades": trade_history,
     }
 
     db.close()
