@@ -8,13 +8,13 @@ from app.models.backtest import Backtest
 from app.models.training_run import TrainingRun
 from app.rl.agent import DQNAgent
 from app.rl.environment import TradingEnvironment
-from app.schemas.backtest import BacktestCreate, BacktestResponse
+from app.schemas.backtest import BacktestCreate
 
 
 router = APIRouter(prefix="/backtests", tags=["Backtests"])
 
 
-@router.post("/", response_model=BacktestResponse)
+@router.post("/")
 def create_backtest(backtest: BacktestCreate):
     db = SessionLocal()
 
@@ -66,8 +66,23 @@ def create_backtest(backtest: BacktestCreate):
     done = False
     total_reward = 0
 
+    # Count what the model actually decided during backtesting
+    action_counts = {
+        "hold": 0,
+        "buy": 0,
+        "sell": 0,
+    }
+
     while not done:
         action = agent.choose_action(state)
+
+        if action == 0:
+            action_counts["hold"] += 1
+        elif action == 1:
+            action_counts["buy"] += 1
+        elif action == 2:
+            action_counts["sell"] += 1
+
         state, reward, done = env.step(action)
         total_reward += reward
 
@@ -82,5 +97,15 @@ def create_backtest(backtest: BacktestCreate):
     db.commit()
     db.refresh(new_backtest)
 
+    response = {
+        "id": new_backtest.id,
+        "training_run_id": new_backtest.training_run_id,
+        "status": new_backtest.status,
+        "total_reward": new_backtest.total_reward,
+        "final_balance": new_backtest.final_balance,
+        "created_at": new_backtest.created_at,
+        "actions": action_counts,
+    }
+
     db.close()
-    return new_backtest
+    return response
