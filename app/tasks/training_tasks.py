@@ -6,6 +6,7 @@ from app.models.experiment import Experiment
 from app.models.training_result import TrainingResult
 from app.models.training_run import TrainingRun
 from app.rl.trainer import DQNTrainer
+from app.rl.market_data import load_prices_from_csv
 
 import os
 import torch
@@ -49,8 +50,7 @@ def run_training_task(training_run_id: int):
         db.commit()
 
         # Temporary fake market data.
-        # Later we will replace this with real historical price data.
-        prices = list(range(100, 150))
+        prices = load_prices_from_csv()
 
         trainer = DQNTrainer(
             prices=prices,

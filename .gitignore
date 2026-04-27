@@ -22,3 +22,12 @@ __pycache__/
 
 # Alembic cache
 alembic/versions/__pycache__/
+
+*.pt
+*.pth
+*.csv
+*.parquet
+data/
+models/
+checkpoints/data/*.csv
+data/

@@ -5,6 +5,7 @@ from app.rl.replay_buffer import ReplayBuffer
 # main network → learns every step
 # target network → gives more stable future values
 
+
 class DQNTrainer:
     def __init__(self, prices, episodes=10, batch_size=4, target_update_interval=5):
         """
@@ -35,7 +36,11 @@ class DQNTrainer:
 
             while not done:
                 action = self.agent.choose_action(state)
-                next_state, reward, done = self.env.step(action)
+
+                # env.step now returns 4 values:
+                # next_state, reward, done, info
+                # We do not need info during training yet, so we ignore it with _
+                next_state, reward, done, _ = self.env.step(action)
 
                 self.replay_buffer.add(
                     state,
