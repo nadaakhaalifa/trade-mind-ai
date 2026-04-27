@@ -2,18 +2,25 @@ class TradingEnvironment:
     def __init__(self, prices, initial_balance=10000):
         self.prices = prices
         self.initial_balance = initial_balance
+
+        # Trading settings
+        self.window_size = 5
+        self.position_size = 10
+        self.trade_cost = 0.05
+
         self.reset()
 
     def reset(self):
-        self.step_index = 5
+        self.step_index = self.window_size
         self.balance = self.initial_balance
         self.position = 0
         self.entry_price = 0
+        self.entry_step = None
 
         return self._get_state()
 
     def _get_state(self):
-        window = self.prices[self.step_index - 5:self.step_index]
+        window = self.prices[self.step_index - self.window_size:self.step_index]
 
         return {
             "prices": window,
@@ -30,7 +37,8 @@ class TradingEnvironment:
 
         # 🔴 HOLD
         if action == 0:
-            reward -= 0.2
+            # Very small penalty only, so HOLD is allowed when market is bad
+            reward -= 0.01
             executed_action = "hold"
 
         # 🟢 BUY
@@ -38,8 +46,10 @@ class TradingEnvironment:
             if self.position == 0:
                 self.position = 1
                 self.entry_price = current_price
+                self.entry_step = self.step_index
 
-                reward += 2.0
+                # No fake buy reward. Buying itself is not profit.
+                reward -= self.trade_cost
                 executed_action = "buy"
             else:
                 reward -= 1.0
@@ -49,19 +59,15 @@ class TradingEnvironment:
         elif action == 2:
             if self.position == 1:
                 profit = current_price - self.entry_price
-                net = profit * 10
+                net = profit * self.position_size
 
-                reward += net * 20
-
-                if profit > 0:
-                    reward += 10.0
-                else:
-                    reward -= 5.0
-
-                self.balance += net
+                # Reward equals real PnL minus small trading cost
+                reward += net - self.trade_cost
+                self.balance += net - self.trade_cost
 
                 self.position = 0
                 self.entry_price = 0
+                self.entry_step = None
 
                 executed_action = "sell"
             else:
@@ -74,29 +80,30 @@ class TradingEnvironment:
 
             if self.position == 1:
                 profit = current_price - self.entry_price
-                net = profit * 10
+                net = profit * self.position_size
 
-                reward += net * 20
-                self.balance += net
+                reward += net - self.trade_cost
+                self.balance += net - self.trade_cost
 
                 self.position = 0
                 self.entry_price = 0
+                self.entry_step = None
 
                 executed_action = "forced_close"
 
         self.step_index += 1
 
         info = {
-               "chosen_action": action,
-               "effective_action": action,
-               "executed_action": executed_action,
-               "price": current_price,
-               "reward": reward,
-               "balance": self.balance,
-               "position": self.position,
-               "entry_price": self.entry_price,
-               "entry_step": None,
-               "cooldown": 0,
+            "chosen_action": action,
+            "effective_action": action,
+            "executed_action": executed_action,
+            "price": current_price,
+            "reward": reward,
+            "balance": self.balance,
+            "position": self.position,
+            "entry_price": self.entry_price,
+            "entry_step": self.entry_step,
+            "cooldown": 0,
         }
 
         return self._get_state(), reward, done, info
