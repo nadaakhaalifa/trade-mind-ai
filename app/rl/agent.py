@@ -8,7 +8,7 @@ from app.rl.network import DQNNetwork
 
 
 class DQNAgent:
-    def __init__(self, state_size=10, action_size=3):
+    def __init__(self, state_size=15, action_size=3):
         """
         Actions:
         0 = hold
@@ -31,9 +31,9 @@ class DQNAgent:
         # RL Params
         self.gamma = 0.99
 
-        # Exploration (FIXED)
+        # Exploration
         self.epsilon = 1.0
-        self.epsilon_decay = 0.98  
+        self.epsilon_decay = 0.998
         self.epsilon_min = 0.05
 
     def preprocess_state(self, state):
@@ -45,27 +45,47 @@ class DQNAgent:
         balance = state["balance"]
         position = state["position"]
 
-        first_price = prices[0]
+        first_price = prices[0] + 1e-9
 
-        normalized_prices = [(p - first_price) / first_price for p in prices]
+        normalized_prices = [
+            (price - first_price) / first_price
+            for price in prices
+        ]
 
-        price_change = prices[-1] - prices[-2]
+        price_change = state.get("price_change", prices[-1] - prices[-2])
         normalized_price_change = price_change / first_price
 
-        moving_avg = sum(prices) / len(prices)
-        trend = prices[-1] - moving_avg
+        momentum = state.get("momentum", prices[-1] - prices[0])
+        normalized_momentum = momentum / first_price
+
+        moving_avg = state.get("moving_avg", sum(prices) / len(prices))
+        trend = state.get("trend", prices[-1] - moving_avg)
         normalized_trend = trend / first_price
 
-        momentum = prices[-1] - prices[0]
-        normalized_momentum = momentum / first_price
+        avg_return = state.get("avg_return", 0)
+        volatility = state.get("volatility", 0)
+
+        unrealized_pnl = state.get("unrealized_pnl", 0)
+        normalized_unrealized_pnl = unrealized_pnl / first_price
+
+        holding_steps = state.get("holding_steps", 0)
+        normalized_holding_steps = holding_steps / 20
+
+        cooldown = state.get("cooldown", 0)
+        normalized_cooldown = cooldown / 2
 
         normalized_balance = balance / 10000
 
         state_list = normalized_prices + [
             normalized_price_change,
             normalized_trend,
-            normalized_balance,
             normalized_momentum,
+            avg_return,
+            volatility,
+            normalized_unrealized_pnl,
+            normalized_holding_steps,
+            normalized_cooldown,
+            normalized_balance,
             position,
         ]
 
@@ -73,27 +93,51 @@ class DQNAgent:
 
     def choose_action(self, state):
         """
-        Epsilon-greedy with FIXED exploration bias
+        Epsilon-greedy with valid action control.
+
+        Important:
+        Exploration is now biased toward trading activity:
+        - If holding a position, prefer sell more than hold.
+        - If flat, prefer buy more than hold.
         """
 
-        # encourage buy/sell instead of HOLD spam
+        position = state["position"]
+        cooldown = state.get("cooldown", 0)
+
         if random.random() < self.epsilon:
-             if state["position"] == 1:
-                 return random.choice([0, 2])  # hold or sell only
-             
-             return random.choice([0, 1])      # hold or buy only
-             
-            
+            if position == 1:
+                # Already holding: do not buy again.
+                # Bias toward sell so the agent learns exits.
+                return random.choice([2, 2, 0])
+
+            if cooldown > 0:
+                # During cooldown, stay out of market.
+                return 0
+
+            # No position: bias toward buy so the agent learns entries.
+            return random.choice([1, 1, 0])
+
         state_tensor = self.preprocess_state(state)
 
         with torch.no_grad():
-            q_values = self.network(state_tensor)
+            q_values = self.network(state_tensor)[0]
 
-        return torch.argmax(q_values).item()
+        # Mask invalid actions during exploitation too
+        masked_q_values = q_values.clone()
+
+        if position == 1:
+            masked_q_values[1] = -1e9  # cannot buy while holding
+        else:
+            masked_q_values[2] = -1e9  # cannot sell without position
+
+            if cooldown > 0:
+                masked_q_values[1] = -1e9  # cannot buy during cooldown
+
+        return torch.argmax(masked_q_values).item()
 
     def learn(self, batch):
         """
-        Learn from batch (FIXED stability)
+        Learn from batch with valid next-action masking
         """
 
         states = []
@@ -106,8 +150,22 @@ class DQNAgent:
             q_values = self.network(state_tensor)
 
             with torch.no_grad():
-                next_q_values = self.target_network(next_state_tensor)
-                max_next_q = torch.max(next_q_values)
+                next_q_values = self.target_network(next_state_tensor)[0]
+
+                next_position = next_state.get("position", 0)
+                next_cooldown = next_state.get("cooldown", 0)
+
+                masked_next_q_values = next_q_values.clone()
+
+                if next_position == 1:
+                    masked_next_q_values[1] = -1e9
+                else:
+                    masked_next_q_values[2] = -1e9
+
+                    if next_cooldown > 0:
+                        masked_next_q_values[1] = -1e9
+
+                max_next_q = torch.max(masked_next_q_values)
 
             target = reward
             if not done:
@@ -138,6 +196,7 @@ class DQNAgent:
         """
         Reduce randomness
         """
+
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
@@ -147,4 +206,5 @@ class DQNAgent:
         """
         Sync networks
         """
+
         self.target_network.load_state_dict(self.network.state_dict())
