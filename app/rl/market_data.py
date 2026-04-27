@@ -1,8 +1,31 @@
-def load_sample_prices():
-    return [
-        100, 101, 102, 101, 103, 104, 102, 105, 106, 104,
-        107, 108, 106, 109, 110, 108, 111, 112, 110, 113,
-        114, 112, 115, 116, 114, 117, 118, 116, 119, 120,
-        118, 121, 122, 120, 123, 124, 122, 125, 126, 124,
-        127, 128, 126, 129, 130, 128, 131, 132, 130, 133,
-    ]
+import csv
+
+
+def load_prices_from_csv(
+    file_path="data/btc.csv",
+    price_column="Close",
+    limit=500,
+):
+    prices = []
+
+    previous_price = None
+
+    with open(file_path, "r") as file:
+        reader = csv.DictReader(file)
+
+        for row in reader:
+            price = float(row[price_column])
+
+            if price <= 0:
+                continue
+
+            if previous_price is not None and price == previous_price:
+                continue
+
+            prices.append(price)
+            previous_price = price
+
+            if len(prices) >= limit:
+                break
+
+    return prices

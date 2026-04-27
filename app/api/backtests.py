@@ -9,7 +9,7 @@ from app.models.training_run import TrainingRun
 from app.rl.agent import DQNAgent
 from app.rl.environment import TradingEnvironment
 from app.schemas.backtest import BacktestCreate
-from app.rl.market_data import load_sample_prices
+from app.rl.market_data import load_prices_from_csv
 
 
 router = APIRouter(prefix="/backtests", tags=["Backtests"])
@@ -48,7 +48,7 @@ def create_backtest(backtest: BacktestCreate):
             detail="Saved model file not found",
         )
 
-    prices = load_sample_prices()
+    prices = load_prices_from_csv()
 
     env = TradingEnvironment(prices=prices)
     agent = DQNAgent()
