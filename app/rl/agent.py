@@ -33,7 +33,7 @@ class DQNAgent:
 
         # Exploration (FIXED)
         self.epsilon = 1.0
-        self.epsilon_decay = 0.97   # faster learning
+        self.epsilon_decay = 0.98  
         self.epsilon_min = 0.05
 
     def preprocess_state(self, state):
