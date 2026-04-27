@@ -27,8 +27,13 @@ class TradingEnvironment:
         return self._get_state()
 
     def _get_state(self):
-        window = self.prices[self.step_index - self.window_size:self.step_index]
-        current_price = self.prices[self.step_index]
+        safe_step_index = min(self.step_index, len(self.prices) - 1)
+
+        window = self.prices[
+            safe_step_index - self.window_size:safe_step_index
+        ]
+
+        current_price = self.prices[safe_step_index]
 
         first_price = window[0]
         last_price = window[-1]
@@ -42,7 +47,9 @@ class TradingEnvironment:
         for i in range(1, len(window)):
             previous_price = window[i - 1]
             current_window_price = window[i]
-            returns.append((current_window_price - previous_price) / (previous_price + 1e-9))
+            returns.append(
+                (current_window_price - previous_price) / (previous_price + 1e-9)
+            )
 
         avg_return = sum(returns) / len(returns)
         volatility = sum(abs(r - avg_return) for r in returns) / len(returns)
@@ -52,7 +59,7 @@ class TradingEnvironment:
 
         if self.position == 1:
             unrealized_pnl = current_price - self.entry_price
-            holding_steps = self.step_index - self.entry_step
+            holding_steps = safe_step_index - self.entry_step
 
         return {
             "prices": window,
